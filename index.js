@@ -54,8 +54,8 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Add a route for txt.html that shows just the IP address as plain text
-app.get('/txt.html', (req, res) => {
+// Add a route for ip that shows just the IP address as plain text
+app.get('/ip', (req, res) => {
   const ip = req.headers['x-forwarded-for'] || 
              req.connection.remoteAddress || 
              req.socket.remoteAddress || 

@@ -39,7 +39,7 @@ app.get('/', (req, res) => {
           .ip {
             font-size: 24px;
             font-weight: bold;
-            color: #8BC34A;
+            color: #c80815;
             margin: 20px 0;
           }
         </style>

@@ -34,7 +34,7 @@ app.get('/', (req, res) => {
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
           }
           h1 {
-            color: #4CAF50;
+            color: #c80815;
           }
           .ip {
             font-size: 24px;

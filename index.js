@@ -23,13 +23,13 @@ app.get('/', (req, res) => {
             align-items: center;
             height: 100vh;
             margin: 0;
-            background-color: #121212;
+            background-color: #244433;
             color: #4CAF50;
           }
           .container {
             text-align: center;
             padding: 20px;
-            background-color: #1E1E1E;
+            background-color: #356052;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
           }

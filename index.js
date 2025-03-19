@@ -34,12 +34,12 @@ app.get('/', (req, res) => {
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
           }
           h1 {
-            color: #c80815;
+            color: #172e35;
           }
           .ip {
             font-size: 24px;
             font-weight: bold;
-            color: #c80815;
+            color: #172e35;
             margin: 20px 0;
           }
         </style>

@@ -142,11 +142,26 @@ app.get('/test', (req, res) => {
 
 // Add a route for ip that shows just the IP address as plain text
 app.get('/ip', (req, res) => {
-  const ip = req.headers['x-forwarded-for'] || 
-             req.connection.remoteAddress || 
-             req.socket.remoteAddress || 
-             (req.connection.socket ? req.connection.socket.remoteAddress : null);
+  let ip = req.headers['x-forwarded-for'] || 
+           req.connection.remoteAddress || 
+           req.socket.remoteAddress || 
+           (req.connection.socket ? req.connection.socket.remoteAddress : null);
   
+  // Extract IPv4 address
+  if (ip) {
+    // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
+    if (ip.includes('::ffff:')) {
+      ip = ip.split('::ffff:')[1];
+    }
+    // If it contains a port, remove it
+    if (ip.includes(':')) {
+      const parts = ip.split(':');
+      // Check if it looks like an IPv4 address with port
+      if (parts.length === 2 && parts[0].split('.').length === 4) {
+        ip = parts[0];
+      }
+    }
+  }
   // Set content type to plain text
   res.setHeader('Content-Type', 'text/plain');
   res.send(ip);

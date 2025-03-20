@@ -25,7 +25,7 @@ app.get('/', (req, res) => {
       }
     }
   }
-  // Send HTML response with the IP address (dark theme with green text)
+  // Send HTML response with the IP address 
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -94,7 +94,7 @@ app.get('/test', (req, res) => {
     }
   }
   
-  // Send HTML response with the IP address (dark theme with green text)
+  // Send HTML response with the IP address 
     res.send(`
     <!DOCTYPE html>
     <html>

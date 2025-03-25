@@ -2,35 +2,58 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 
+function getIPSource(req) {
+  if (req.headers['x-forwarded-for']) {
+    return { 
+      ip: req.headers['x-forwarded-for'].split(',')[0].trim(),
+      source: 'x-forwarded-for header'
+    };
+  }
+  if (req.connection.remoteAddress) {
+    return { 
+      ip: req.connection.remoteAddress,
+      source: 'connection remote address'
+    };
+  }
+  if (req.socket.remoteAddress) {
+    return { 
+      ip: req.socket.remoteAddress,
+      source: 'socket remote address'
+    };
+  }
+  if (req.connection.socket && req.connection.socket.remoteAddress) {
+    return { 
+      ip: req.connection.socket.remoteAddress,
+      source: 'connection socket remote address'
+    };
+  }
+  return { 
+    ip: null, 
+    source: 'no source found' 
+  };
+}
+
 app.get('/', (req, res) => {
-  // IP Retrieval Sources:
-  // 1. 'x-forwarded-for': Used when the app is behind a proxy (e.g., Nginx, load balancer)
-  //    - Typically contains the original client IP in a comma-separated list
-  // 2. req.connection.remoteAddress: Connection's remote IP address (legacy method)
-  // 3. req.socket.remoteAddress: Socket's remote IP address (modern method)
-  // 4. req.connection.socket.remoteAddress: Fallback for older Node.js versions
-  let ip = req.headers['x-forwarded-for'] || // Source: Proxy header
-           req.connection.remoteAddress ||   // Source: Connection object
-           req.socket.remoteAddress ||       // Source: Socket object
-           (req.connection.socket ? req.connection.socket.remoteAddress : null); // Source: Fallback connection socket
+  const { ip, source } = getIPSource(req);
   
   // Extract IPv4 address
-  if (ip) {
+  let processedIP = ip;
+  if (processedIP) {
     // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
-    if (ip.includes('::ffff:')) {
-      ip = ip.split('::ffff:')[1];
+    if (processedIP.includes('::ffff:')) {
+      processedIP = processedIP.split('::ffff:')[1];
     }
     // If it contains a port, remove it
-    if (ip.includes(':')) {
-      const parts = ip.split(':');
+    if (processedIP.includes(':')) {
+      const parts = processedIP.split(':');
       // Check if it looks like an IPv4 address with port
       if (parts.length === 2 && parts[0].split('.').length === 4) {
-        ip = parts[0];
+        processedIP = parts[0];
       }
     }
   }
   
-  // Send HTML response with the IP address 
+  // Send HTML response with the IP address and its source
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -57,54 +80,51 @@ app.get('/', (req, res) => {
           h1 {
             color: #172e35;
           }
-          .ip {
+          .ip, .source {
             font-size: 24px;
             font-weight: bold;
             color: #172e35;
             margin: 20px 0;
+          }
+          .source {
+            font-size: 16px;
+            color: #4CAF50;
           }
         </style>
       </head>
       <body>
         <div class="container">
           <h1>Your IP Address</h1>
-          <div class="ip">${ip}</div>
+          <div class="ip">${processedIP || 'Unable to retrieve IP'}</div>
+          <div class="source">Source: ${source}</div>
         </div>
       </body>
     </html>
   `);
 });
 
-// Identical modifications for '/test' route
+// Identical logic for '/test' route
 app.get('/test', (req, res) => {
-  // IP Retrieval Sources:
-  // 1. 'x-forwarded-for': Used when the app is behind a proxy (e.g., Nginx, load balancer)
-  //    - Typically contains the original client IP in a comma-separated list
-  // 2. req.connection.remoteAddress: Connection's remote IP address (legacy method)
-  // 3. req.socket.remoteAddress: Socket's remote IP address (modern method)
-  // 4. req.connection.socket.remoteAddress: Fallback for older Node.js versions
-  let ip = req.headers['x-forwarded-for'] || // Source: Proxy header
-           req.connection.remoteAddress ||   // Source: Connection object
-           req.socket.remoteAddress ||       // Source: Socket object
-           (req.connection.socket ? req.connection.socket.remoteAddress : null); // Source: Fallback connection socket
+  const { ip, source } = getIPSource(req);
   
   // Extract IPv4 address
-  if (ip) {
+  let processedIP = ip;
+  if (processedIP) {
     // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
-    if (ip.includes('::ffff:')) {
-      ip = ip.split('::ffff:')[1];
+    if (processedIP.includes('::ffff:')) {
+      processedIP = processedIP.split('::ffff:')[1];
     }
     // If it contains a port, remove it
-    if (ip.includes(':')) {
-      const parts = ip.split(':');
+    if (processedIP.includes(':')) {
+      const parts = processedIP.split(':');
       // Check if it looks like an IPv4 address with port
       if (parts.length === 2 && parts[0].split('.').length === 4) {
-        ip = parts[0];
+        processedIP = parts[0];
       }
     }
   }
   
-  // Send HTML response with the IP address 
+  // Send HTML response with the IP address and its source
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -131,55 +151,53 @@ app.get('/test', (req, res) => {
           h1 {
             color: #172e35;
           }
-          .ip {
+          .ip, .source {
             font-size: 24px;
             font-weight: bold;
             color: #172e35;
             margin: 20px 0;
+          }
+          .source {
+            font-size: 16px;
+            color: #4CAF50;
           }
         </style>
       </head>
       <body>
         <div class="container">
           <h1>Your IP Address</h1>
-          <div class="ip">${ip}</div>
+          <div class="ip">${processedIP || 'Unable to retrieve IP'}</div>
+          <div class="source">Source: ${source}</div>
         </div>
       </body>
     </html>
   `);
 });
 
-// Identical modifications for '/ip' route
+// Route for plain text IP with source
 app.get('/ip', (req, res) => {
-  // IP Retrieval Sources:
-  // 1. 'x-forwarded-for': Used when the app is behind a proxy (e.g., Nginx, load balancer)
-  //    - Typically contains the original client IP in a comma-separated list
-  // 2. req.connection.remoteAddress: Connection's remote IP address (legacy method)
-  // 3. req.socket.remoteAddress: Socket's remote IP address (modern method)
-  // 4. req.connection.socket.remoteAddress: Fallback for older Node.js versions
-  let ip = req.headers['x-forwarded-for'] || // Source: Proxy header
-           req.connection.remoteAddress ||   // Source: Connection object
-           req.socket.remoteAddress ||       // Source: Socket object
-           (req.connection.socket ? req.connection.socket.remoteAddress : null); // Source: Fallback connection socket
+  const { ip, source } = getIPSource(req);
   
   // Extract IPv4 address
-  if (ip) {
+  let processedIP = ip;
+  if (processedIP) {
     // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
-    if (ip.includes('::ffff:')) {
-      ip = ip.split('::ffff:')[1];
+    if (processedIP.includes('::ffff:')) {
+      processedIP = processedIP.split('::ffff:')[1];
     }
     // If it contains a port, remove it
-    if (ip.includes(':')) {
-      const parts = ip.split(':');
+    if (processedIP.includes(':')) {
+      const parts = processedIP.split(':');
       // Check if it looks like an IPv4 address with port
       if (parts.length === 2 && parts[0].split('.').length === 4) {
-        ip = parts[0];
+        processedIP = parts[0];
       }
     }
   }
+  
   // Set content type to plain text
   res.setHeader('Content-Type', 'text/plain');
-  res.send(ip);
+  res.send(`IP: ${processedIP || 'Unable to retrieve IP'}\nSource: ${source}`);
 });
 
 app.listen(port, () => {

@@ -3,12 +3,16 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  // Get the visitor's IP address
-  // Get the visitor's IP address
-  let ip = req.headers['x-forwarded-for'] || 
-           req.connection.remoteAddress || 
-           req.socket.remoteAddress || 
-           (req.connection.socket ? req.connection.socket.remoteAddress : null);
+  // IP Retrieval Sources:
+  // 1. 'x-forwarded-for': Used when the app is behind a proxy (e.g., Nginx, load balancer)
+  //    - Typically contains the original client IP in a comma-separated list
+  // 2. req.connection.remoteAddress: Connection's remote IP address (legacy method)
+  // 3. req.socket.remoteAddress: Socket's remote IP address (modern method)
+  // 4. req.connection.socket.remoteAddress: Fallback for older Node.js versions
+  let ip = req.headers['x-forwarded-for'] || // Source: Proxy header
+           req.connection.remoteAddress ||   // Source: Connection object
+           req.socket.remoteAddress ||       // Source: Socket object
+           (req.connection.socket ? req.connection.socket.remoteAddress : null); // Source: Fallback connection socket
   
   // Extract IPv4 address
   if (ip) {
@@ -25,6 +29,7 @@ app.get('/', (req, res) => {
       }
     }
   }
+  
   // Send HTML response with the IP address 
   res.send(`
     <!DOCTYPE html>
@@ -70,13 +75,18 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Add a route to the test site
+// Identical modifications for '/test' route
 app.get('/test', (req, res) => {
-  // Get the visitor's IP address
-  let ip = req.headers['x-forwarded-for'] || 
-           req.connection.remoteAddress || 
-           req.socket.remoteAddress || 
-           (req.connection.socket ? req.connection.socket.remoteAddress : null);
+  // IP Retrieval Sources:
+  // 1. 'x-forwarded-for': Used when the app is behind a proxy (e.g., Nginx, load balancer)
+  //    - Typically contains the original client IP in a comma-separated list
+  // 2. req.connection.remoteAddress: Connection's remote IP address (legacy method)
+  // 3. req.socket.remoteAddress: Socket's remote IP address (modern method)
+  // 4. req.connection.socket.remoteAddress: Fallback for older Node.js versions
+  let ip = req.headers['x-forwarded-for'] || // Source: Proxy header
+           req.connection.remoteAddress ||   // Source: Connection object
+           req.socket.remoteAddress ||       // Source: Socket object
+           (req.connection.socket ? req.connection.socket.remoteAddress : null); // Source: Fallback connection socket
   
   // Extract IPv4 address
   if (ip) {
@@ -95,7 +105,7 @@ app.get('/test', (req, res) => {
   }
   
   // Send HTML response with the IP address 
-    res.send(`
+  res.send(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -139,13 +149,18 @@ app.get('/test', (req, res) => {
   `);
 });
 
-
-// Add a route for ip that shows just the IP address as plain text
+// Identical modifications for '/ip' route
 app.get('/ip', (req, res) => {
-  let ip = req.headers['x-forwarded-for'] || 
-           req.connection.remoteAddress || 
-           req.socket.remoteAddress || 
-           (req.connection.socket ? req.connection.socket.remoteAddress : null);
+  // IP Retrieval Sources:
+  // 1. 'x-forwarded-for': Used when the app is behind a proxy (e.g., Nginx, load balancer)
+  //    - Typically contains the original client IP in a comma-separated list
+  // 2. req.connection.remoteAddress: Connection's remote IP address (legacy method)
+  // 3. req.socket.remoteAddress: Socket's remote IP address (modern method)
+  // 4. req.connection.socket.remoteAddress: Fallback for older Node.js versions
+  let ip = req.headers['x-forwarded-for'] || // Source: Proxy header
+           req.connection.remoteAddress ||   // Source: Connection object
+           req.socket.remoteAddress ||       // Source: Socket object
+           (req.connection.socket ? req.connection.socket.remoteAddress : null); // Source: Fallback connection socket
   
   // Extract IPv4 address
   if (ip) {

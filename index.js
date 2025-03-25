@@ -2,63 +2,67 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 
-function getIPSource(req) {
-  if (req.headers['x-forwarded-for']) {
-    return { 
-      ip: req.headers['x-forwarded-for'].split(',')[0].trim(),
-      source: 'x-forwarded-for header'
-    };
+function getIPDetails(req) {
+  // Collect all potential IP sources
+  const ipSources = {
+    'x-forwarded-for': req.headers['x-forwarded-for'],
+    'connection.remoteAddress': req.connection.remoteAddress,
+    'socket.remoteAddress': req.socket.remoteAddress,
+    'connection.socket.remoteAddress': req.connection.socket ? req.connection.socket.remoteAddress : null
+  };
+
+  // Find the first non-null IP
+  let selectedIP = null;
+  let selectedSource = null;
+
+  for (const [sourceName, ip] of Object.entries(ipSources)) {
+    if (ip) {
+      selectedIP = ip;
+      selectedSource = sourceName;
+      break;
+    }
   }
-  if (req.connection.remoteAddress) {
-    return { 
-      ip: req.connection.remoteAddress,
-      source: 'connection remote address'
-    };
+
+  // Process the IP to clean it up
+  let processedIP = selectedIP;
+  if (processedIP) {
+    // Handle x-forwarded-for which might contain multiple IPs
+    if (sourceName === 'x-forwarded-for') {
+      processedIP = processedIP.split(',')[0].trim();
+    }
+
+    // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
+    if (processedIP.includes('::ffff:')) {
+      processedIP = processedIP.split('::ffff:')[1];
+    }
+
+    // If it contains a port, remove it
+    if (processedIP.includes(':')) {
+      const parts = processedIP.split(':');
+      // Check if it looks like an IPv4 address with port
+      if (parts.length === 2 && parts[0].split('.').length === 4) {
+        processedIP = parts[0];
+      }
+    }
   }
-  if (req.socket.remoteAddress) {
-    return { 
-      ip: req.socket.remoteAddress,
-      source: 'socket remote address'
-    };
-  }
-  if (req.connection.socket && req.connection.socket.remoteAddress) {
-    return { 
-      ip: req.connection.socket.remoteAddress,
-      source: 'connection socket remote address'
-    };
-  }
-  return { 
-    ip: null, 
-    source: 'no source found' 
+
+  return {
+    originalIP: selectedIP,
+    processedIP: processedIP,
+    source: selectedSource,
+    allSources: ipSources
   };
 }
 
 app.get('/', (req, res) => {
-  const { ip, source } = getIPSource(req);
+  const ipDetails = getIPDetails(req);
   
-  // Extract IPv4 address
-  let processedIP = ip;
-  if (processedIP) {
-    // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
-    if (processedIP.includes('::ffff:')) {
-      processedIP = processedIP.split('::ffff:')[1];
-    }
-    // If it contains a port, remove it
-    if (processedIP.includes(':')) {
-      const parts = processedIP.split(':');
-      // Check if it looks like an IPv4 address with port
-      if (parts.length === 2 && parts[0].split('.').length === 4) {
-        processedIP = parts[0];
-      }
-    }
-  }
-  
-  // Send HTML response with the IP address and its source
+  // Send HTML response with detailed IP information
   res.send(`
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Your IP Address</title>
+        <title>Your IP Address Details</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -76,60 +80,58 @@ app.get('/', (req, res) => {
             background-color: #356052;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            max-width: 600px;
+            width: 90%;
           }
           h1 {
             color: #172e35;
           }
           .ip, .source {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
             color: #172e35;
-            margin: 20px 0;
+            margin: 10px 0;
+            word-break: break-all;
           }
-          .source {
-            font-size: 16px;
+          .source-details {
+            font-size: 14px;
             color: #4CAF50;
+            text-align: left;
+            margin-top: 20px;
+          }
+          .source-details div {
+            margin: 5px 0;
           }
         </style>
       </head>
       <body>
         <div class="container">
-          <h1>Your IP Address</h1>
-          <div class="ip">${processedIP || 'Unable to retrieve IP'}</div>
-          <div class="source">Source: ${source}</div>
+          <h1>Your IP Address Details</h1>
+          <div class="ip">Processed IP: ${ipDetails.processedIP || 'Unable to retrieve IP'}</div>
+          <div class="ip">Original IP: ${ipDetails.originalIP || 'Unable to retrieve IP'}</div>
+          <div class="source">Primary Source: ${ipDetails.source}</div>
+          <div class="source-details">
+            <div>x-forwarded-for: ${ipDetails.allSources['x-forwarded-for'] || 'Not present'}</div>
+            <div>connection.remoteAddress: ${ipDetails.allSources['connection.remoteAddress'] || 'Not present'}</div>
+            <div>socket.remoteAddress: ${ipDetails.allSources['socket.remoteAddress'] || 'Not present'}</div>
+            <div>connection.socket.remoteAddress: ${ipDetails.allSources['connection.socket.remoteAddress'] || 'Not present'}</div>
+          </div>
         </div>
       </body>
     </html>
   `);
 });
 
-// Identical logic for '/test' route
+// Similar route for '/test'
 app.get('/test', (req, res) => {
-  const { ip, source } = getIPSource(req);
+  const ipDetails = getIPDetails(req);
   
-  // Extract IPv4 address
-  let processedIP = ip;
-  if (processedIP) {
-    // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
-    if (processedIP.includes('::ffff:')) {
-      processedIP = processedIP.split('::ffff:')[1];
-    }
-    // If it contains a port, remove it
-    if (processedIP.includes(':')) {
-      const parts = processedIP.split(':');
-      // Check if it looks like an IPv4 address with port
-      if (parts.length === 2 && parts[0].split('.').length === 4) {
-        processedIP = parts[0];
-      }
-    }
-  }
-  
-  // Send HTML response with the IP address and its source
+  // Send HTML response with detailed IP information
   res.send(`
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Your IP Address</title>
+        <title>Your IP Address Details</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -147,57 +149,63 @@ app.get('/test', (req, res) => {
             background-color: #356052;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            max-width: 600px;
+            width: 90%;
           }
           h1 {
             color: #172e35;
           }
           .ip, .source {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
             color: #172e35;
-            margin: 20px 0;
+            margin: 10px 0;
+            word-break: break-all;
           }
-          .source {
-            font-size: 16px;
+          .source-details {
+            font-size: 14px;
             color: #4CAF50;
+            text-align: left;
+            margin-top: 20px;
+          }
+          .source-details div {
+            margin: 5px 0;
           }
         </style>
       </head>
       <body>
         <div class="container">
-          <h1>Your IP Address</h1>
-          <div class="ip">${processedIP || 'Unable to retrieve IP'}</div>
-          <div class="source">Source: ${source}</div>
+          <h1>Your IP Address Details</h1>
+          <div class="ip">Processed IP: ${ipDetails.processedIP || 'Unable to retrieve IP'}</div>
+          <div class="ip">Original IP: ${ipDetails.originalIP || 'Unable to retrieve IP'}</div>
+          <div class="source">Primary Source: ${ipDetails.source}</div>
+          <div class="source-details">
+            <div>x-forwarded-for: ${ipDetails.allSources['x-forwarded-for'] || 'Not present'}</div>
+            <div>connection.remoteAddress: ${ipDetails.allSources['connection.remoteAddress'] || 'Not present'}</div>
+            <div>socket.remoteAddress: ${ipDetails.allSources['socket.remoteAddress'] || 'Not present'}</div>
+            <div>connection.socket.remoteAddress: ${ipDetails.allSources['connection.socket.remoteAddress'] || 'Not present'}</div>
+          </div>
         </div>
       </body>
     </html>
   `);
 });
 
-// Route for plain text IP with source
+// Route for plain text IP with source details
 app.get('/ip', (req, res) => {
-  const { ip, source } = getIPSource(req);
-  
-  // Extract IPv4 address
-  let processedIP = ip;
-  if (processedIP) {
-    // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
-    if (processedIP.includes('::ffff:')) {
-      processedIP = processedIP.split('::ffff:')[1];
-    }
-    // If it contains a port, remove it
-    if (processedIP.includes(':')) {
-      const parts = processedIP.split(':');
-      // Check if it looks like an IPv4 address with port
-      if (parts.length === 2 && parts[0].split('.').length === 4) {
-        processedIP = parts[0];
-      }
-    }
-  }
+  const ipDetails = getIPDetails(req);
   
   // Set content type to plain text
   res.setHeader('Content-Type', 'text/plain');
-  res.send(`IP: ${processedIP || 'Unable to retrieve IP'}\nSource: ${source}`);
+  res.send(`Processed IP: ${ipDetails.processedIP || 'Unable to retrieve IP'}
+Original IP: ${ipDetails.originalIP || 'Unable to retrieve IP'}
+Primary Source: ${ipDetails.source}
+
+Detailed Sources:
+x-forwarded-for: ${ipDetails.allSources['x-forwarded-for'] || 'Not present'}
+connection.remoteAddress: ${ipDetails.allSources['connection.remoteAddress'] || 'Not present'}
+socket.remoteAddress: ${ipDetails.allSources['socket.remoteAddress'] || 'Not present'}
+connection.socket.remoteAddress: ${ipDetails.allSources['connection.socket.remoteAddress'] || 'Not present'}`);
 });
 
 app.listen(port, () => {

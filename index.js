@@ -176,10 +176,15 @@ app.get('/ip', (req, res) => {
   
   // Set content type to plain text
   res.setHeader('Content-Type', 'text/plain');
-  res.send(ipAddresses.length > 0 
-    ? ipAddresses.join('\n') 
-    : 'No IP addresses found'
-  );
+  
+  // Only send the first IP address
+  if (ipAddresses.length > 0) {
+    // Extract just the IP part (after the colon and space)
+    const firstIP = ipAddresses[0].split(': ')[1];
+    res.send(firstIP);
+  } else {
+    res.send('No IP address found');
+  }
 });
 
 app.listen(port, () => {

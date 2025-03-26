@@ -95,8 +95,8 @@ app.get('/', (req, res) => {
       <body>
         <div class="container">
           <h1>Your IP Address</h1>
-          <div class="ip">${processedIP || 'Unable to retrieve IP'}</div>
           <div class="source">Source: ${source}</div>
+          <div class="ip">${processedIP || 'Unable to retrieve IP'}</div>
         </div>
       </body>
     </html>
@@ -166,8 +166,8 @@ app.get('/test', (req, res) => {
       <body>
         <div class="container">
           <h1>Your IP Address</h1>
-          <div class="ip">${processedIP || 'Unable to retrieve IP'}</div>
           <div class="source">Source: ${source}</div>
+          <div class="ip">${processedIP || 'Unable to retrieve IP'}</div>
         </div>
       </body>
     </html>

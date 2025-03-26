@@ -2,73 +2,71 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 
-function getIPSource(req) {
+function getAllIPAddresses(req) {
+  const ips = new Set();
+
+  // Collect IPs from x-forwarded-for header (might contain multiple IPs)
   if (req.headers['x-forwarded-for']) {
-    return { 
-      ip: req.headers['x-forwarded-for'].split(',')[0].trim(),
-      source: 'x-forwarded-for header'
-    };
+    req.headers['x-forwarded-for'].split(',').forEach(ip => {
+      const trimmedIP = ip.trim();
+      if (trimmedIP) ips.add(`x-forwarded-for: ${trimmedIP}`);
+    });
   }
+
+  // Collect IP from connection remote address
   if (req.connection.remoteAddress) {
-    return { 
-      ip: req.connection.remoteAddress,
-      source: 'connection remote address'
-    };
+    ips.add(`connection.remoteAddress: ${req.connection.remoteAddress}`);
   }
+
+  // Collect IP from socket remote address
   if (req.socket.remoteAddress) {
-    return { 
-      ip: req.socket.remoteAddress,
-      source: 'socket remote address'
-    };
+    ips.add(`socket.remoteAddress: ${req.socket.remoteAddress}`);
   }
+
+  // Collect IP from connection socket remote address
   if (req.connection.socket && req.connection.socket.remoteAddress) {
-    return { 
-      ip: req.connection.socket.remoteAddress,
-      source: 'connection socket remote address'
-    };
+    ips.add(`connection.socket.remoteAddress: ${req.connection.socket.remoteAddress}`);
   }
-  return { 
-    ip: null, 
-    source: 'no source found' 
-  };
+
+  // Additional headers that might contain IP information
+  const additionalIPHeaders = [
+    'x-real-ip',
+    'x-client-ip',
+    'x-forwarded',
+    'forwarded-for',
+    'forwarded'
+  ];
+
+  additionalIPHeaders.forEach(header => {
+    const headerValue = req.headers[header];
+    if (headerValue) {
+      ips.add(`${header}: ${headerValue}`);
+    }
+  });
+
+  return Array.from(ips);
 }
 
 app.get('/', (req, res) => {
-  const { ip, source } = getIPSource(req);
+  const ipAddresses = getAllIPAddresses(req);
   
-  // Extract IPv4 address
-  let processedIP = ip;
-  if (processedIP) {
-    // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
-    if (processedIP.includes('::ffff:')) {
-      processedIP = processedIP.split('::ffff:')[1];
-    }
-    // If it contains a port, remove it
-    if (processedIP.includes(':')) {
-      const parts = processedIP.split(':');
-      // Check if it looks like an IPv4 address with port
-      if (parts.length === 2 && parts[0].split('.').length === 4) {
-        processedIP = parts[0];
-      }
-    }
-  }
-  
-  // Send HTML response with the IP address and its source
+  // Send HTML response with all IP addresses
   res.send(`
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Your IP Address</title>
+        <title>Your IP Addresses</title>
         <style>
           body {
             font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             background-color: #244433;
             color: #4CAF50;
+            padding: 20px;
           }
           .container {
             text-align: center;
@@ -76,70 +74,61 @@ app.get('/', (req, res) => {
             background-color: #356052;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            max-width: 800px;
+            width: 100%;
           }
           h1 {
             color: #172e35;
           }
-          .ip, .source {
-            font-size: 24px;
-            font-weight: bold;
-            color: #172e35;
-            margin: 20px 0;
+          .ip-list {
+            text-align: left;
+            margin-top: 20px;
+            background-color: #2a4d3e;
+            padding: 15px;
+            border-radius: 5px;
           }
-          .source {
+          .ip-item {
+            margin: 10px 0;
+            word-break: break-all;
             font-size: 16px;
-            color: #4CAF50;
           }
         </style>
       </head>
       <body>
         <div class="container">
-          <h1>Your IP Address</h1>
-          <div class="source">Source: ${source}</div>
-          <div class="ip">${processedIP || 'Unable to retrieve IP'}</div>
+          <h1>Your IP Addresses</h1>
+          <div class="ip-list">
+            ${ipAddresses.length > 0 
+              ? ipAddresses.map(ip => `<div class="ip-item">${ip}</div>`).join('') 
+              : '<div class="ip-item">No IP addresses found</div>'}
+          </div>
         </div>
       </body>
     </html>
   `);
 });
 
-// Identical logic for '/test' route
+// Similar route for '/test'
 app.get('/test', (req, res) => {
-  const { ip, source } = getIPSource(req);
+  const ipAddresses = getAllIPAddresses(req);
   
-  // Extract IPv4 address
-  let processedIP = ip;
-  if (processedIP) {
-    // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
-    if (processedIP.includes('::ffff:')) {
-      processedIP = processedIP.split('::ffff:')[1];
-    }
-    // If it contains a port, remove it
-    if (processedIP.includes(':')) {
-      const parts = processedIP.split(':');
-      // Check if it looks like an IPv4 address with port
-      if (parts.length === 2 && parts[0].split('.').length === 4) {
-        processedIP = parts[0];
-      }
-    }
-  }
-  
-  // Send HTML response with the IP address and its source
+  // Send HTML response with all IP addresses
   res.send(`
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Your IP Address</title>
+        <title>Your IP Addresses</title>
         <style>
           body {
             font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             background-color: #244433;
             color: #4CAF50;
+            padding: 20px;
           }
           .container {
             text-align: center;
@@ -147,57 +136,50 @@ app.get('/test', (req, res) => {
             background-color: #356052;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            max-width: 800px;
+            width: 100%;
           }
           h1 {
             color: #172e35;
           }
-          .ip, .source {
-            font-size: 24px;
-            font-weight: bold;
-            color: #172e35;
-            margin: 20px 0;
+          .ip-list {
+            text-align: left;
+            margin-top: 20px;
+            background-color: #2a4d3e;
+            padding: 15px;
+            border-radius: 5px;
           }
-          .source {
+          .ip-item {
+            margin: 10px 0;
+            word-break: break-all;
             font-size: 16px;
-            color: #4CAF50;
           }
         </style>
       </head>
       <body>
         <div class="container">
-          <h1>Your IP Address</h1>
-          <div class="source">Source: ${source}</div>
-          <div class="ip">${processedIP || 'Unable to retrieve IP'}</div>
+          <h1>Your IP Addresses</h1>
+          <div class="ip-list">
+            ${ipAddresses.length > 0 
+              ? ipAddresses.map(ip => `<div class="ip-item">${ip}</div>`).join('') 
+              : '<div class="ip-item">No IP addresses found</div>'}
+          </div>
         </div>
       </body>
     </html>
   `);
 });
 
-// Route for plain text IP with source
+// Route for plain text IP addresses
 app.get('/ip', (req, res) => {
-  const { ip, source } = getIPSource(req);
-  
-  // Extract IPv4 address
-  let processedIP = ip;
-  if (processedIP) {
-    // If it's IPv4 mapped in IPv6 (::ffff:192.168.0.1), extract just the IPv4 part
-    if (processedIP.includes('::ffff:')) {
-      processedIP = processedIP.split('::ffff:')[1];
-    }
-    // If it contains a port, remove it
-    if (processedIP.includes(':')) {
-      const parts = processedIP.split(':');
-      // Check if it looks like an IPv4 address with port
-      if (parts.length === 2 && parts[0].split('.').length === 4) {
-        processedIP = parts[0];
-      }
-    }
-  }
+  const ipAddresses = getAllIPAddresses(req);
   
   // Set content type to plain text
   res.setHeader('Content-Type', 'text/plain');
-  res.send(`IP: ${processedIP || 'Unable to retrieve IP'}\nSource: ${source}`);
+  res.send(ipAddresses.length > 0 
+    ? ipAddresses.join('\n') 
+    : 'No IP addresses found'
+  );
 });
 
 app.listen(port, () => {

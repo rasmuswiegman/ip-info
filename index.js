@@ -14,19 +14,19 @@ function getAllIPAddresses(req) {
   }
 
   // Collect IP from connection remote address
-  if (req.connection.remoteAddress) {
-    ips.add(`connection.remoteAddress: ${req.connection.remoteAddress}`);
-  }
+//  if (req.connection.remoteAddress) {
+//    ips.add(`connection.remoteAddress: ${req.connection.remoteAddress}`);
+//  }
 
   // Collect IP from socket remote address
-  if (req.socket.remoteAddress) {
-    ips.add(`socket.remoteAddress: ${req.socket.remoteAddress}`);
-  }
+//  if (req.socket.remoteAddress) {
+//    ips.add(`socket.remoteAddress: ${req.socket.remoteAddress}`);
+//  }
 
   // Collect IP from connection socket remote address
-  if (req.connection.socket && req.connection.socket.remoteAddress) {
-    ips.add(`connection.socket.remoteAddress: ${req.connection.socket.remoteAddress}`);
-  }
+//  if (req.connection.socket && req.connection.socket.remoteAddress) {
+//    ips.add(`connection.socket.remoteAddress: ${req.connection.socket.remoteAddress}`);
+//  }
 
   // Additional headers that might contain IP information
   const additionalIPHeaders = [

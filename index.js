@@ -586,10 +586,6 @@ app.get('/', (req, res) => {
               ? ipAddresses.map(ip => `<div class="ip-item">${ip}</div>`).join('') 
               : '<div class="ip-item">No IP addresses found</div>'}
           </div>
-          <nav>
-            <a href="/history">View 7-Day History</a>
-            <a href="/login" class="login-link">Login</a>
-          </nav>
         </div>
       </body>
     </html>

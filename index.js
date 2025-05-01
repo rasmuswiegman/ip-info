@@ -1,337 +1,6 @@
-// Add change password form
-app.get('/change-password', requireAuth, (req, res) => {
-  const message = req.session.passwordMessage;
-  req.session.passwordMessage = null;
-  
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Change Password - IP History</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #244433;
-            color: #4CAF50;
-            padding: 20px;
-          }
-          .container {
-            text-align: center;
-            padding: 20px;
-            background-color: #356052;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-            max-width: 400px;
-            width: 100%;
-          }
-          h1 {
-            color: #172e35;
-          }
-          .form-group {
-            margin-bottom: 15px;
-            text-align: left;
-          }
-          label {
-            display: block;
-            margin-bottom: 5px;
-          }
-          input[type="password"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #2a4d3e;
-            border-radius: 4px;
-            background-color: #2a4d3e;
-            color: #4CAF50;
-            box-sizing: border-box;
-          }
-          button {
-            background-color: #172e35;
-            color: #8effb2;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-          }
-          button:hover {
-            background-color: #0c1a1e;
-          }
-          .message {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            text-align: left;
-          }
-          .error {
-            color: #ff6b6b;
-            background-color: rgba(255, 107, 107, 0.1);
-          }
-          .success {
-            color: #4CAF50;
-            background-color: rgba(76, 175, 80, 0.1);
-          }
-          nav {
-            margin-top: 20px;
-          }
-          nav a {
-            color: #8effb2;
-            text-decoration: none;
-            margin: 0 5px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1>Change Password</h1>
-          ${message ? 
-            `<div class="message ${message.type === 'error' ? 'error' : 'success'}">${message.text}</div>` : 
-            ''}
-          <form action="/change-password" method="POST">
-            <div class="form-group">
-              <label for="current">Current Password:</label>
-              <input type="password" id="current" name="current" required>
-            </div>
-            <div class="form-group">
-              <label for="new">New Password:</label>
-              <input type="password" id="new" name="new" required minlength="8">
-            </div>
-            <div class="form-group">
-              <label for="confirm">Confirm New Password:</label>
-              <input type="password" id="confirm" name="confirm" required minlength="8">
-            </div>
-            <button type="submit">Change Password</button>
-          </form>
-          <nav>
-            <a href="/history">Back to History</a>
-          </nav>
-        </div>
-      </body>
-    </html>
-  `);
-});
-
-// Handle password change
-app.post('/change-password', requireAuth, (req, res) => {
-  const { current, new: newPassword, confirm } = req.body;
-  
-  // Hash the current password
-  const hashedCurrent = crypto
-    .createHash('sha256')
-    .update(current || '')
-    .digest('hex');
-  
-  // Validate current password
-  if (hashedCurrent !== config.passwordHash) {
-    req.session.passwordMessage = {
-      type: 'error',
-      text: 'Current password is incorrect'
-    };
-    return res.redirect('/change-password');
-  }
-  
-  // Validate new password
-  if (newPassword !== confirm) {
-    req.session.passwordMessage = {
-      type: 'error',
-      text: 'New passwords do not match'
-    };
-    return res.redirect('/change-password');
-  }
-  
-  if ((newPassword || '').length < 8) {
-    req.session.passwordMessage = {
-      type: 'error',
-      text: 'New password must be at least 8 characters'
-    };
-    return res.redirect('/change-password');
-  }
-  
-  // Hash and store the new password
-  const hashedNewPassword = crypto
-    .createHash('sha256')
-    .update(newPassword)
-    .digest('hex');
-    
-  // Update config
-  config.passwordHash = hashedNewPassword;
-  
-  // Save updated config
-  if (saveConfig()) {
-    req.session.passwordMessage = {
-      type: 'success',
-      text: 'Password changed successfully!'
-    };
-  } else {
-    req.session.passwordMessage = {
-      type: 'error',
-      text: 'Failed to save the new password. Please try again.'
-    };
-  }
-  
-  res.redirect('/change-password');
-});// Authentication middleware
-function requireAuth(req, res, next) {
-  if (req.session && req.session.authenticated) {
-    return next();
-  } else {
-    // Store the original URL to redirect after login
-    req.session.returnTo = req.originalUrl;
-    return res.redirect('/login');
-  }
-}
-
-// Login page
-app.get('/login', (req, res) => {
-  const error = req.session.loginError;
-  // Clear any error message
-  req.session.loginError = null;
-  
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Login - IP History</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #244433;
-            color: #4CAF50;
-            padding: 20px;
-          }
-          .container {
-            text-align: center;
-            padding: 20px;
-            background-color: #356052;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-            max-width: 400px;
-            width: 100%;
-          }
-          h1 {
-            color: #172e35;
-          }
-          .form-group {
-            margin-bottom: 15px;
-            text-align: left;
-          }
-          label {
-            display: block;
-            margin-bottom: 5px;
-          }
-          input[type="text"],
-          input[type="password"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #2a4d3e;
-            border-radius: 4px;
-            background-color: #2a4d3e;
-            color: #4CAF50;
-            box-sizing: border-box;
-          }
-          button {
-            background-color: #172e35;
-            color: #8effb2;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-          }
-          button:hover {
-            background-color: #0c1a1e;
-          }
-          .error {
-            color: #ff6b6b;
-            background-color: rgba(255, 107, 107, 0.1);
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            text-align: left;
-            display: ${error ? 'block' : 'none'};
-          }
-          nav {
-            margin-top: 20px;
-          }
-          nav a {
-            color: #8effb2;
-            text-decoration: none;
-            font-size: 14px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1>Login Required</h1>
-          <div class="error">${error || ''}</div>
-          <form action="/login" method="POST">
-            <div class="form-group">
-              <label for="username">Username:</label>
-              <input type="text" id="username" name="username" required autocomplete="username">
-            </div>
-            <div class="form-group">
-              <label for="password">Password:</label>
-              <input type="password" id="password" name="password" required autocomplete="current-password">
-            </div>
-            <button type="submit">Login</button>
-          </form>
-          <nav>
-            <a href="/">Back to Home</a>
-          </nav>
-        </div>
-      </body>
-    </html>
-  `);
-});
-
-// Login form submission handler
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  
-  // Hash the password (SHA-256)
-  const hashedPassword = crypto
-    .createHash('sha256')
-    .update(password || '')
-    .digest('hex');
-  
-  // Check credentials
-  if (username === config.username && hashedPassword === config.passwordHash) {
-    // Set authentication flag
-    req.session.authenticated = true;
-    
-    // Redirect to the originally requested URL or to history
-    const returnTo = req.session.returnTo || '/history';
-    delete req.session.returnTo;
-    
-    res.redirect(returnTo);
-  } else {
-    // Store error message and redirect back to login
-    req.session.loginError = 'Invalid username or password';
-    res.redirect('/login');
-  }
-});
-
-// Logout route
-app.get('/logout', (req, res) => {
-  // Destroy the session
-  req.session.destroy();
-  res.redirect('/');
-});const express = require('express');
+const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
-const session = require('express-session');
-const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
 
 // Set the timezone for the server logs
 process.env.TZ = 'Europe/Copenhagen';
@@ -344,63 +13,6 @@ process.on('uncaughtException', (err) => {
 
 // Enable trust proxy if behind a reverse proxy
 app.set('trust proxy', true);
-
-// Configuration file path
-const CONFIG_FILE = path.join(__dirname, 'config.json');
-
-// Default configuration
-let config = {
-  username: 'admin',
-  // Default password is 'password123' - change this!
-  passwordHash: 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f'
-};
-
-// Try to load existing configuration
-try {
-  if (fs.existsSync(CONFIG_FILE)) {
-    const fileContent = fs.readFileSync(CONFIG_FILE, 'utf8');
-    config = JSON.parse(fileContent);
-    console.log('Configuration loaded from file');
-  } else {
-    // Create default config file
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
-    console.log('Default configuration file created');
-  }
-} catch (err) {
-  console.error('Error loading configuration:', err);
-  // Continue with default config
-}
-
-// Authentication configuration
-const USERNAME = config.username;
-const PASSWORD_HASH = config.passwordHash;
-const SECRET_KEY = crypto.randomBytes(32).toString('hex'); // Generate a random session secret
-
-// Save updated configuration
-function saveConfig() {
-  try {
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
-    console.log('Configuration saved to file');
-    return true;
-  } catch (err) {
-    console.error('Error saving configuration:', err);
-    return false;
-  }
-}
-
-// Enable session middleware
-app.use(session({
-  secret: SECRET_KEY,
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production', // Only set secure in production
-    maxAge: 86400000 // 24 hours
-  }
-}));
-
-// Parse URL-encoded bodies (as sent by HTML forms)
-app.use(express.urlencoded({ extended: true }));
 
 // Data structure to store IP history
 // Format: { timestamp: Date, ip: String, headers: Object }
@@ -573,9 +185,6 @@ app.get('/', (req, res) => {
           nav a:hover {
             background-color: #0c1a1e;
           }
-          .login-link {
-            background-color: #1c3b2a;
-          }
         </style>
       </head>
       <body>
@@ -586,6 +195,9 @@ app.get('/', (req, res) => {
               ? ipAddresses.map(ip => `<div class="ip-item">${ip}</div>`).join('') 
               : '<div class="ip-item">No IP addresses found</div>'}
           </div>
+          <nav>
+            <a href="/history">View 7-Day History</a>
+          </nav>
         </div>
       </body>
     </html>
@@ -688,8 +300,8 @@ app.get('/ip', (req, res) => {
   }
 });
 
-// New history route (protected by authentication)
-app.get('/history', requireAuth, (req, res) => {
+// New history route
+app.get('/history', (req, res) => {
   // Format timestamps for display with Europe/Copenhagen timezone
   const formatDate = (date) => {
     try {
@@ -875,7 +487,6 @@ app.get('/history', requireAuth, (req, res) => {
             <p>Number of days with data: ${Object.keys(groupedByDay).length}</p>
             <p>Data retention: 7 days</p>
             <p>Server timezone: Europe/Copenhagen</p>
-            <p>User: ${config.username}</p>
           </div>
           
           ${daysHtml || '<p>No history data available yet.</p>'}
@@ -883,8 +494,6 @@ app.get('/history', requireAuth, (req, res) => {
           <nav>
             <a href="/">Back to Home</a>
             <a href="/history">Refresh History</a>
-            <a href="/change-password">Change Password</a>
-            <a href="/logout">Logout</a>
           </nav>
         </div>
       </body>
